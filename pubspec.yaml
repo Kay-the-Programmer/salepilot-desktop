@@ -1,0 +1,52 @@
+name: salepilot_desktop
+description: "SalePilot POS Desktop"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # HTTP
+  dio: ^5.7.0
+
+  # Models / JSON
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # Storage
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # Connectivity
+  connectivity_plus: ^6.1.0
+
+  # Misc
+  uuid: ^4.5.1
+  intl: ^0.20.1
+  window_manager: ^0.4.3
+  logger: ^2.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.9.0
+  riverpod_generator: ^2.6.3
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.6.3
+
+flutter:
+  uses-material-design: true
