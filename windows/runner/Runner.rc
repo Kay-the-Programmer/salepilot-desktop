@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.salepilot" "\0"
-            VALUE "FileDescription", "salepilot_desktop" "\0"
+            VALUE "CompanyName", "SalePilot" "\0"
+            VALUE "FileDescription", "SalePilot POS — Point of Sale" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "salepilot_desktop" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.salepilot. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 SalePilot. All rights reserved." "\0"
             VALUE "OriginalFilename", "salepilot_desktop.exe" "\0"
-            VALUE "ProductName", "salepilot_desktop" "\0"
+            VALUE "ProductName", "SalePilot POS" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

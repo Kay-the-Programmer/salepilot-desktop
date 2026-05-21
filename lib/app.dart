@@ -5,7 +5,7 @@ import 'core/config.dart';
 import 'core/theme.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
-import 'features/pos/pos_placeholder_screen.dart';
+import 'features/pos/pos_screen.dart';
 
 class SalePilotApp extends ConsumerStatefulWidget {
   const SalePilotApp({super.key});
@@ -37,7 +37,7 @@ class _SalePilotAppState extends ConsumerState<SalePilotApp> {
           if (snap.connectionState != ConnectionState.done) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-          return auth.isAuthed ? const PosPlaceholderScreen() : const LoginScreen();
+          return auth.isAuthed ? const PosScreen() : const LoginScreen();
         },
       ),
     );
