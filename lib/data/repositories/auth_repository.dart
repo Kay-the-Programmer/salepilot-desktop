@@ -32,6 +32,29 @@ class AuthRepository {
     return AuthSession(user: user, token: token);
   }
 
+  /// Exchange a Firebase ID token (from the desktop Google flow) for an app
+  /// session. The backend's POST /auth/google returns a flattened camelCase
+  /// user with the app token embedded as `token` (not `{token, user}` like
+  /// /auth/login), so parse it from the single object.
+  Future<AuthSession> loginWithGoogle({required String idToken, String? role}) async {
+    final res = await api.post('/auth/google', body: {
+      'idToken': idToken,
+      ?'role': role,
+    });
+    if (res is! Map) {
+      throw ApiException(null, 'Unexpected Google login response');
+    }
+    final map = Map<String, dynamic>.from(res);
+    final token = map['token']?.toString();
+    if (token == null || token.isEmpty) {
+      throw ApiException(null, 'Invalid Google login response');
+    }
+    final user = AppUser.fromJson(map);
+    await store.writeToken(token);
+    await store.writeUserJson(jsonEncode(user.toJson()));
+    return AuthSession(user: user, token: token);
+  }
+
   Future<AuthSession?> restoreSession() async {
     final token = await store.readToken();
     final userRaw = await store.readUserJson();

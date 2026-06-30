@@ -55,6 +55,16 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    - assets/salepilot_logo.png
+    - assets/google_g_logo.png
+
+  fonts:
+    - family: Hanken Grotesk
+      fonts:
+        # Variable font — Flutter drives the `wght` axis from TextStyle.fontWeight.
+        - asset: assets/fonts/HankenGrotesk-Variable.ttf
+
 # Windows installer config — see https://pub.dev/packages/msix
 # Build with: dart run msix:create
 #

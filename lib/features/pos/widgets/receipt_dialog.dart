@@ -275,7 +275,7 @@ class _HeaderBanner extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTokens.brandSuccess, Color(0xFF059669)],
+          colors: [AppTokens.brandSuccess, Color(0xFF15803D)],
         ),
       ),
       child: Row(

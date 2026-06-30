@@ -130,12 +130,8 @@ class _CheckoutPanelState extends ConsumerState<CheckoutPanel> {
                       widget.busy ? 'Processing…' : 'Charge ${formatCurrency(totals.total, widget.settings)}',
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                     ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: canCharge ? AppTokens.brandSuccess : null,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: scheme.surfaceContainerHigh,
-                      disabledForegroundColor: scheme.onSurfaceVariant,
-                    ),
+                    // Conversion action — vibrant orange per the Velocity system.
+                    style: AppTheme.actionButton(scheme),
                     onPressed: canCharge ? widget.onCharge : null,
                   ),
                 ),

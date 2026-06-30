@@ -86,13 +86,13 @@ class _BrandPanel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTokens.brandPrimary,
-            AppTokens.brandPrimary.withValues(alpha: 0.85),
-            const Color(0xFF7C3AED), // violet end
+            AppTokens.brandPrimary, // deep navy
+            Color(0xFF1A428A), // primary container navy
+            Color(0xFF001944), // darkest navy
           ],
         ),
       ),
@@ -102,17 +102,18 @@ class _BrandPanel extends StatelessWidget {
           Positioned(
             top: -120,
             right: -80,
-            child: _blurCircle(280, Colors.white.withValues(alpha: 0.18)),
+            child: _blurCircle(280, Colors.white.withValues(alpha: 0.16)),
           ),
           Positioned(
             bottom: -100,
             left: -60,
-            child: _blurCircle(320, Colors.white.withValues(alpha: 0.10)),
+            child: _blurCircle(320, Colors.white.withValues(alpha: 0.08)),
           ),
+          // Vibrant orange accent — the brand's "conversion" energy.
           Positioned(
             top: 200,
             left: 80,
-            child: _blurCircle(140, const Color(0xFF10B981).withValues(alpha: 0.25)),
+            child: _blurCircle(160, AppTokens.brandSecondary.withValues(alpha: 0.28)),
           ),
           // Content
           Padding(
@@ -375,6 +376,27 @@ class _LoginForm extends ConsumerWidget {
                   : const Text('Sign in'),
             ),
           ),
+          const SizedBox(height: AppTokens.s4),
+          _orDivider(scheme),
+          const SizedBox(height: AppTokens.s4),
+          SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: loading ? null : () => ref.read(authStateProvider.notifier).loginWithGoogle(),
+              icon: Image.asset(
+                'assets/google_g_logo.png',
+                width: 18,
+                height: 18,
+                errorBuilder: (_, _, _) => const Icon(Icons.login, size: 18),
+              ),
+              label: const Text('Continue with Google'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: scheme.onSurface,
+                side: BorderSide(color: scheme.outline),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
           const SizedBox(height: AppTokens.s5),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppTokens.s3, vertical: AppTokens.s2),
@@ -412,6 +434,23 @@ class _LoginForm extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _orDivider(ColorScheme scheme) {
+    final line = Expanded(child: Divider(color: scheme.outlineVariant));
+    return Row(
+      children: [
+        line,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTokens.s3),
+          child: Text(
+            'or',
+            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
+        line,
+      ],
     );
   }
 

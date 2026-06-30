@@ -365,6 +365,320 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   }
 }
 
+/// Top app bar: store identity on the left, sync status + actions + the user
+/// menu on the right.
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.settings,
+    required this.userName,
+    required this.userEmail,
+    required this.userRole,
+    required this.loading,
+    required this.onHeldSales,
+    required this.onRefresh,
+    required this.onMenuSelect,
+  });
+
+  final StoreSettings settings;
+  final String userName;
+  final String userEmail;
+  final String userRole;
+  final bool loading;
+  final VoidCallback onHeldSales;
+  final VoidCallback? onRefresh;
+  final ValueChanged<String> onMenuSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final initials = _initials(userName.isNotEmpty ? userName : userEmail);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.s4),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+            ),
+            child: Icon(Icons.point_of_sale_rounded, color: scheme.primary, size: 22),
+          ),
+          const SizedBox(width: AppTokens.s3),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                settings.storeName,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.2),
+              ),
+              Text(
+                'Point of Sale',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const SyncStatusPill(),
+          const SizedBox(width: AppTokens.s2),
+          IconButton(
+            icon: const Icon(Icons.pause_circle_outline),
+            tooltip: 'Held sales',
+            onPressed: onHeldSales,
+          ),
+          IconButton(
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            tooltip: 'Refresh catalog',
+            onPressed: onRefresh,
+          ),
+          const SizedBox(width: AppTokens.s2),
+          PopupMenuButton<String>(
+            tooltip: 'Account',
+            onSelected: onMenuSelect,
+            offset: const Offset(0, 48),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'returns',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.assignment_return_outlined),
+                  title: Text('Process return'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'diagnostics',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.sync_alt),
+                  title: Text('Sync diagnostics'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'shortcuts',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.keyboard_outlined),
+                  title: Text('Keyboard shortcuts'),
+                ),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'logout',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.logout),
+                  title: Text('Sign out'),
+                ),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: scheme.primary,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(width: AppTokens.s2),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        userName.isNotEmpty ? userName : userEmail,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                      if (userRole.isNotEmpty)
+                        Text(
+                          userRole,
+                          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.expand_more, size: 18, color: scheme.onSurfaceVariant),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _initials(String source) {
+    final parts = source.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
+  }
+}
+
+/// Catalog search field with an inline clear button and an optional result count.
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.resultCount,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final int? resultCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search products by name, SKU or barcode…',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'Clear',
+                      onPressed: onClear,
+                    ),
+            ),
+          ),
+        ),
+        if (resultCount != null) ...[
+          const SizedBox(width: AppTokens.s3),
+          Text(
+            resultCount == 1 ? '1 result' : '$resultCount results',
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Full-panel error state shown when the catalog fails to load with no cache.
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.error, required this.onRetry});
+
+  final String error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTokens.s8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.cloud_off_outlined, size: 40, color: scheme.onErrorContainer),
+            ),
+            const SizedBox(height: AppTokens.s4),
+            Text(
+              "Couldn't load products",
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppTokens.s1),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: AppTokens.s5),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header above the cart: the "Current sale" label, live item count, and a
+/// clear-cart shortcut.
+class _OrderHeader extends ConsumerWidget {
+  const _OrderHeader();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final count = ref.watch(cartProvider).items.length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppTokens.s4, AppTokens.s3, AppTokens.s2, AppTokens.s3),
+      child: Row(
+        children: [
+          Text(
+            'Current sale',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(width: AppTokens.s2),
+          if (count > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppTokens.radiusXl),
+              ),
+              child: Text(
+                count == 1 ? '1 item' : '$count items',
+                style: TextStyle(color: scheme.primary, fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          const Spacer(),
+          if (count > 0)
+            TextButton.icon(
+              onPressed: () => ref.read(cartProvider.notifier).clear(),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Clear'),
+              style: TextButton.styleFrom(foregroundColor: scheme.error),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShortcutsDialog extends StatelessWidget {
   const _ShortcutsDialog();
 

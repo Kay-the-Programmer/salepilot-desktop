@@ -4,6 +4,7 @@ import '../../core/config.dart';
 import '../../data/api/api_client.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/storage/secure_store.dart';
+import 'google_signin_desktop.dart';
 
 final secureStoreProvider = Provider<SecureStore>((ref) => SecureStore());
 
@@ -58,6 +59,32 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final session = await _repo.login(email: email, password: password);
       state = AuthState(session: session);
+    } on ApiException catch (e) {
+      state = state.copyWith(loading: false, error: e.message);
+    } catch (e) {
+      state = state.copyWith(loading: false, error: e.toString());
+    }
+  }
+
+  /// Runs the desktop Google OAuth flow (system browser + loopback), exchanges
+  /// the resulting Firebase ID token for an app session, and signs the user in.
+  /// New accounts are provisioned as a business/staff user so they can sell.
+  Future<void> loginWithGoogle() async {
+    if (!AppConfig.googleSignInConfigured) {
+      state = state.copyWith(
+        loading: false,
+        error: 'Google sign-in isn\'t configured for this build. '
+            'Set GOOGLE_OAUTH_CLIENT_ID (and secret) via --dart-define.',
+      );
+      return;
+    }
+    state = state.copyWith(loading: true, clearError: true);
+    try {
+      final idToken = await GoogleSignInDesktop().obtainFirebaseIdToken();
+      final session = await _repo.loginWithGoogle(idToken: idToken, role: 'business');
+      state = AuthState(session: session);
+    } on GoogleSignInException catch (e) {
+      state = state.copyWith(loading: false, error: e.message);
     } on ApiException catch (e) {
       state = state.copyWith(loading: false, error: e.message);
     } catch (e) {
