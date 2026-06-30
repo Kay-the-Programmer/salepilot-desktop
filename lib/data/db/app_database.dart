@@ -23,6 +23,8 @@ class Products extends Table {
   TextColumn get imageUrlsJson => text().withDefault(const Constant('[]'))();
   TextColumn get brand => text().nullable()();
   RealColumn get reorderPoint => real().nullable()();
+  IntColumn get unitsPerBox => integer().nullable()();
+  RealColumn get boxCost => real().nullable()();
   TextColumn get updatedAt => text().nullable()();
 
   @override
@@ -95,13 +97,66 @@ class HeldSales extends Table {
   TextColumn get note => text().nullable()();
 }
 
-@DriftDatabase(tables: [Products, Categories, Customers, SettingsKv, Sales, SyncQueue, HeldSales])
+/// One product in the active cycle-count session. The whole table is the
+/// session: a non-empty table means a count is in progress.
+@DataClassName('StockTakeItemRow')
+class StockTakeItems extends Table {
+  TextColumn get productId => text()();
+  TextColumn get productName => text()();
+  TextColumn get productSku => text()();
+  RealColumn get expectedQty => real()();
+  RealColumn get countedQty => real().nullable()(); // null = not yet counted
+  TextColumn get unitOfMeasure => text().withDefault(const Constant('unit'))();
+  IntColumn get sessionStartedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {productId};
+}
+
+/// Local audit log of stock changes (adjustments + received shipments).
+@DataClassName('StockMovementRow')
+class StockMovements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get productId => text()();
+  TextColumn get productName => text()();
+  RealColumn get delta => real()();
+  RealColumn get previousStock => real()();
+  RealColumn get newStock => real()();
+  TextColumn get reason => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get synced => integer().withDefault(const Constant(0))();
+}
+
+@DriftDatabase(tables: [
+  Products,
+  Categories,
+  Customers,
+  SettingsKv,
+  Sales,
+  SyncQueue,
+  HeldSales,
+  StockTakeItems,
+  StockMovements,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_open());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(products, products.unitsPerBox);
+            await m.addColumn(products, products.boxCost);
+            await m.createTable(stockTakeItems);
+            await m.createTable(stockMovements);
+          }
+        },
+      );
 
   // ---- Products ----
   Future<List<ProductRow>> allActiveProducts() =>
@@ -111,6 +166,19 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<ProductRow>> watchActiveProducts() =>
       (select(products)..where((p) => p.status.equals('active'))..orderBy([(p) => OrderingTerm(expression: p.name)]))
           .watch();
+
+  Stream<List<ProductRow>> watchAllProducts() =>
+      (select(products)..orderBy([(p) => OrderingTerm(expression: p.name)])).watch();
+
+  Future<ProductRow?> productById(String id) =>
+      (select(products)..where((p) => p.id.equals(id))).getSingleOrNull();
+
+  /// Partial update — only the columns set on [changes] are written.
+  Future<void> updateProductRow(String id, ProductsCompanion changes) =>
+      (update(products)..where((p) => p.id.equals(id))).write(changes);
+
+  Future<void> deleteProductById(String id) =>
+      (delete(products)..where((p) => p.id.equals(id))).go();
 
   Future<ProductRow?> findProductByBarcodeOrSku(String code) async {
     final q = select(products)
@@ -166,6 +234,10 @@ class AppDatabase extends _$AppDatabase {
         ..limit(limit))
       .get();
 
+  Stream<List<SaleRow>> watchAllSales() => (select(sales)
+        ..orderBy([(s) => OrderingTerm(expression: s.timestamp, mode: OrderingMode.desc)]))
+      .watch();
+
   // ---- Sync queue ----
   Future<int> enqueueSync(SyncQueueCompanion entry) => into(syncQueue).insert(entry);
 
@@ -217,6 +289,51 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> removeHeldSale(int id) =>
       (delete(heldSales)..where((t) => t.id.equals(id))).go();
+
+  // ---- Stock take (cycle count) ----
+  Stream<List<StockTakeItemRow>> watchStockTakeItems() =>
+      (select(stockTakeItems)..orderBy([(t) => OrderingTerm(expression: t.productName)])).watch();
+
+  Future<List<StockTakeItemRow>> allStockTakeItems() =>
+      (select(stockTakeItems)..orderBy([(t) => OrderingTerm(expression: t.productName)])).get();
+
+  Future<int> stockTakeItemCount() async {
+    final c = countAll();
+    final query = selectOnly(stockTakeItems)..addColumns([c]);
+    final row = await query.getSingle();
+    return row.read(c) ?? 0;
+  }
+
+  Future<void> seedStockTakeItems(List<Insertable<StockTakeItemRow>> rows) async {
+    await transaction(() async {
+      await delete(stockTakeItems).go();
+      await batch((b) => b.insertAll(stockTakeItems, rows));
+    });
+  }
+
+  Future<void> recordStockTakeCount(String productId, double counted) =>
+      (update(stockTakeItems)..where((t) => t.productId.equals(productId)))
+          .write(StockTakeItemsCompanion(countedQty: Value(counted)));
+
+  Future<void> clearStockTakeItem(String productId) =>
+      (update(stockTakeItems)..where((t) => t.productId.equals(productId)))
+          .write(const StockTakeItemsCompanion(countedQty: Value(null)));
+
+  Future<void> clearStockTakeItems() => delete(stockTakeItems).go();
+
+  // ---- Stock movements (local audit log) ----
+  Future<int> insertStockMovement(StockMovementsCompanion movement) =>
+      into(stockMovements).insert(movement);
+
+  Stream<List<StockMovementRow>> watchStockMovements({int limit = 100, String? productId}) {
+    final q = select(stockMovements)
+      ..orderBy([(m) => OrderingTerm(expression: m.createdAt, mode: OrderingMode.desc)])
+      ..limit(limit);
+    if (productId != null) {
+      q.where((m) => m.productId.equals(productId));
+    }
+    return q.watch();
+  }
 }
 
 LazyDatabase _open() {

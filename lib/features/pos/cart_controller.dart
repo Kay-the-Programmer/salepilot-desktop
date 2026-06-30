@@ -229,3 +229,26 @@ final StateNotifierProvider<CartController, CartState> cartProvider =
     StateNotifierProvider<CartController, CartState>((ref) {
   return CartController();
 });
+
+/// Live totals for the current cart. Recomputes whenever the cart changes.
+final Provider<CartTotals> cartTotalsProvider = Provider<CartTotals>((ref) {
+  return ref.watch(cartProvider).totals();
+});
+
+/// Whether the current cart can be charged (items + method chosen + enough
+/// cash for cash payments).
+final Provider<bool> canChargeProvider = Provider<bool>((ref) {
+  return ref.watch(chargeBlockerProvider) == null;
+});
+
+/// Human-readable reason the cart can't be charged yet, or null when it can.
+final Provider<String?> chargeBlockerProvider = Provider<String?>((ref) {
+  final cart = ref.watch(cartProvider);
+  if (cart.items.isEmpty) return 'Add items to the cart';
+  if (cart.paymentMethod == null) return 'Choose a payment method';
+  final isCash = cart.paymentMethod!.toLowerCase().contains('cash');
+  if (isCash && cart.cashReceived < cart.totals().total) {
+    return 'Enter enough cash';
+  }
+  return null;
+});

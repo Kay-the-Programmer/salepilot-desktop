@@ -79,6 +79,24 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> patch(String path, {Object? body}) async {
+    try {
+      final res = await _dio.patch(path, data: body);
+      return res.data;
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  Future<dynamic> delete(String path, {Object? body}) async {
+    try {
+      final res = await _dio.delete(path, data: body);
+      return res.data;
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
   ApiException _wrap(DioException e) {
     final status = e.response?.statusCode;
     final body = e.response?.data;

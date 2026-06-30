@@ -90,17 +90,32 @@ class SalesRepository {
 
   /// Try to push a single queue entry. Returns true on success.
   /// Treats 200/201/2xx and 409 (already exists / idempotent conflict) as success.
+  ///
+  /// Honors the entry's HTTP [method] so non-sale mutations (product
+  /// create/update/delete, stock adjust, archive) sync through the same queue.
   Future<bool> pushQueueEntry(SyncQueueRow entry) async {
     try {
-      await api.post(entry.endpoint, body: jsonDecode(entry.bodyJson));
+      final body = entry.bodyJson.isEmpty ? null : jsonDecode(entry.bodyJson);
+      switch (entry.method.toUpperCase()) {
+        case 'PUT':
+          await api.put(entry.endpoint, body: body);
+        case 'PATCH':
+          await api.patch(entry.endpoint, body: body);
+        case 'DELETE':
+          await api.delete(entry.endpoint, body: body);
+        default:
+          await api.post(entry.endpoint, body: body);
+      }
       if (entry.refKey != null) {
         await db.markSaleSynced(entry.refKey!);
       }
       await db.deleteSyncEntry(entry.id);
       return true;
     } on ApiException catch (e) {
-      // Idempotency: 409 means server has this transaction already.
-      if (e.statusCode == 409) {
+      // Idempotency: 409 = server already has it; 404 on a DELETE = already
+      // gone. Both mean the server state matches our intent, so treat as done.
+      if (e.statusCode == 409 ||
+          (e.statusCode == 404 && entry.method.toUpperCase() == 'DELETE')) {
         if (entry.refKey != null) {
           await db.markSaleSynced(entry.refKey!);
         }

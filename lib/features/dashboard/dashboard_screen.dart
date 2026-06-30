@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/branding.dart';
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../data/db/app_database.dart';
 import '../../data/models/store_settings.dart';
@@ -56,119 +57,109 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hero = _HeroCard(
+      label: 'TODAY',
+      value: formatCurrency(stats.todayRevenue, settings),
+      sub: '${stats.todayCount} transaction${stats.todayCount == 1 ? '' : 's'}',
+      sparkline: stats.weeklyTotals,
+    );
+    final week = _StatCard(
+      label: 'LAST 7 DAYS',
+      value: formatCurrency(stats.weekRevenue, settings),
+      sub: '${stats.weekCount} sale${stats.weekCount == 1 ? '' : 's'}',
+      icon: Icons.show_chart_rounded,
+      color: AppTokens.brandSuccess,
+    );
+    final change = _ChangeCard(change: stats.revenueWowChange);
+
+    final health = [
+      _StatCard(
+        label: 'PRODUCTS',
+        value: '${stats.totalProducts}',
+        sub: 'active in catalog',
+        icon: Icons.inventory_2_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _StatCard(
+        label: 'LOW STOCK',
+        value: '${stats.lowStockCount}',
+        sub: 'need reorder',
+        icon: Icons.warning_amber_rounded,
+        color: AppTokens.brandWarning,
+        highlight: stats.lowStockCount > 0,
+      ),
+      _StatCard(
+        label: 'OUT OF STOCK',
+        value: '${stats.outOfStockCount}',
+        sub: 'unavailable for sale',
+        icon: Icons.do_not_disturb_on_outlined,
+        color: AppTokens.brandDanger,
+        highlight: stats.outOfStockCount > 0,
+      ),
+      _StatCard(
+        label: 'INVENTORY VALUE',
+        value: formatCurrency(stats.totalInventoryValue, settings),
+        sub: 'at cost basis',
+        icon: Icons.account_balance_wallet_outlined,
+        color: AppTokens.brandSuccess,
+      ),
+    ];
+
+    final topProducts = _TopProducts(products: stats.topProducts, settings: settings);
+    final recentSales = _RecentSales(sales: stats.recentSales, settings: settings);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTokens.s5),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ─── Top row: today + week + WoW change ────────────────────
-            IntrinsicHeight(
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _HeroCard(
-                      label: 'TODAY',
-                      value: formatCurrency(stats.todayRevenue, settings),
-                      sub: '${stats.todayCount} transaction${stats.todayCount == 1 ? '' : 's'}',
-                      sparkline: stats.weeklyTotals,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    flex: 3,
-                    child: _StatCard(
-                      label: 'LAST 7 DAYS',
-                      value: formatCurrency(stats.weekRevenue, settings),
-                      sub: '${stats.weekCount} sale${stats.weekCount == 1 ? '' : 's'}',
-                      icon: Icons.show_chart_rounded,
-                      color: AppTokens.brandSuccess,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    flex: 3,
-                    child: _ChangeCard(
-                      change: stats.revenueWowChange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.s3),
-            // ─── Inventory health row ──────────────────────────────────
-            IntrinsicHeight(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      label: 'PRODUCTS',
-                      value: '${stats.totalProducts}',
-                      sub: 'active in catalog',
-                      icon: Icons.inventory_2_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'LOW STOCK',
-                      value: '${stats.lowStockCount}',
-                      sub: 'need reorder',
-                      icon: Icons.warning_amber_rounded,
-                      color: AppTokens.brandWarning,
-                      highlight: stats.lowStockCount > 0,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'OUT OF STOCK',
-                      value: '${stats.outOfStockCount}',
-                      sub: 'unavailable for sale',
-                      icon: Icons.do_not_disturb_on_outlined,
-                      color: AppTokens.brandDanger,
-                      highlight: stats.outOfStockCount > 0,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'INVENTORY VALUE',
-                      value: formatCurrency(stats.totalInventoryValue, settings),
-                      sub: 'at cost basis',
-                      icon: Icons.account_balance_wallet_outlined,
-                      color: AppTokens.brandSuccess,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.s3),
-            // ─── Bottom row: top products + recent sales ──────────────
-            IntrinsicHeight(
-              child: Row(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final narrow = c.maxWidth < Breakpoints.compact;
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _TopProducts(
-                      products: stats.topProducts,
-                      settings: settings,
+                  // ─── Top: today + week + WoW change ───────────────────
+                  if (narrow) ...[
+                    hero,
+                    const SizedBox(height: AppTokens.s3),
+                    ResponsiveCardGrid(children: [week, change]),
+                  ] else
+                    IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(flex: 5, child: hero),
+                          const SizedBox(width: AppTokens.s3),
+                          Expanded(flex: 3, child: week),
+                          const SizedBox(width: AppTokens.s3),
+                          Expanded(flex: 3, child: change),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppTokens.s3),
-                  Expanded(
-                    child: _RecentSales(
-                      sales: stats.recentSales,
-                      settings: settings,
+                  const SizedBox(height: AppTokens.s3),
+                  // ─── Inventory health (wraps 4 / 2 / 1) ───────────────
+                  ResponsiveCardGrid(children: health),
+                  const SizedBox(height: AppTokens.s3),
+                  // ─── Top products + recent sales ──────────────────────
+                  if (narrow) ...[
+                    topProducts,
+                    const SizedBox(height: AppTokens.s3),
+                    recentSales,
+                  ] else
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: topProducts),
+                          const SizedBox(width: AppTokens.s3),
+                          Expanded(child: recentSales),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );

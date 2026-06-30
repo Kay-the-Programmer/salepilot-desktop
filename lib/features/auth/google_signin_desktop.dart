@@ -158,9 +158,11 @@ class GoogleSignInDesktop {
   Future<void> _openInBrowser(String url) async {
     try {
       if (Platform.isWindows) {
-        // `start` is a cmd builtin; the empty "" is the window title arg so
-        // URLs with spaces/& are handled. runInShell lets cmd resolve it.
-        await Process.start('cmd', ['/c', 'start', '', url], runInShell: true);
+        // Open via rundll32 rather than `cmd /c start`: cmd treats the `&`
+        // between OAuth query params as a command separator, which truncates
+        // the URL (dropping response_type, scope, …). rundll32 receives the
+        // URL as a single argument with no shell parsing.
+        await Process.start('rundll32', ['url.dll,FileProtocolHandler', url]);
       } else if (Platform.isMacOS) {
         await Process.start('open', [url]);
       } else {

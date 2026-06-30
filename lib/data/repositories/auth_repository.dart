@@ -39,7 +39,7 @@ class AuthRepository {
   Future<AuthSession> loginWithGoogle({required String idToken, String? role}) async {
     final res = await api.post('/auth/google', body: {
       'idToken': idToken,
-      ?'role': role,
+      'role': ?role,
     });
     if (res is! Map) {
       throw ApiException(null, 'Unexpected Google login response');
@@ -53,6 +53,22 @@ class AuthRepository {
     await store.writeToken(token);
     await store.writeUserJson(jsonEncode(user.toJson()));
     return AuthSession(user: user, token: token);
+  }
+
+  /// Register a new account. The backend creates the user (role: staff) and
+  /// emails a verification OTP — it does NOT return a session, so the caller
+  /// must prompt the user to verify, then sign in. Throws [ApiException] on
+  /// failure (e.g. 409 user already exists).
+  Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    await api.post('/auth/register', body: {
+      'name': name,
+      'email': email,
+      'password': password,
+    });
   }
 
   Future<AuthSession?> restoreSession() async {

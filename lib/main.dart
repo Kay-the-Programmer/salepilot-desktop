@@ -14,7 +14,9 @@ Future<void> main() async {
     await windowManager.waitUntilReadyToShow(
       const WindowOptions(
         size: Size(1280, 800),
-        minimumSize: Size(1024, 640),
+        // Allow the window to shrink to tablet-ish widths; layouts reflow
+        // responsively below ~1000 (see core/responsive.dart).
+        minimumSize: Size(820, 600),
         center: true,
         title: 'SalePilot POS',
         backgroundColor: Colors.transparent,

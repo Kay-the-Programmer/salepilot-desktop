@@ -4,6 +4,7 @@ import 'package:printing/printing.dart';
 
 import '../../app_providers.dart';
 import '../../core/branding.dart';
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../data/models/product.dart';
 import '../../data/models/store_settings.dart';
@@ -43,6 +44,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final stats = ref.watch(inventoryStatsProvider);
     final pending = ref.watch(pendingStockAdjustmentsProvider);
     final settings = ref.watch(posDataProvider).settings ?? StoreSettings();
+    // On narrow windows the labelled CTAs would overflow the app bar, so
+    // collapse them to icon buttons.
+    final compactBar = context.isMedium;
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -160,33 +164,46 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           ),
           const SizedBox(width: AppTokens.s2),
           // Secondary CTA — receive a shipment. Pairs with "New product".
-          // Tonal (outlined) styling so the primary action stays visually
-          // dominant.
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.inbox_outlined, size: 18),
-              label: const Text('Receive shipment'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTokens.brandSuccess,
-                side: BorderSide(
-                  color: AppTokens.brandSuccess.withValues(alpha: 0.5),
-                ),
-              ),
+          // Collapses to an icon button on narrow windows.
+          if (compactBar)
+            IconButton(
+              icon: const Icon(Icons.inbox_outlined),
+              tooltip: 'Receive shipment',
+              color: AppTokens.brandSuccess,
               onPressed: () => _openReceiveFlow(context),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.inbox_outlined, size: 18),
+                label: const Text('Receive shipment'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTokens.brandSuccess,
+                  side: BorderSide(
+                    color: AppTokens.brandSuccess.withValues(alpha: 0.5),
+                  ),
+                ),
+                onPressed: () => _openReceiveFlow(context),
+              ),
             ),
-          ),
           const SizedBox(width: AppTokens.s2),
-          // Primary CTA — visually distinct so it stands out from the
-          // icon buttons above. Matches the "New" pattern in Gmail / Outlook.
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-            child: FilledButton.icon(
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('New product'),
+          // Primary CTA — also collapses to a filled icon button when narrow.
+          if (compactBar)
+            IconButton.filled(
+              icon: const Icon(Icons.add_rounded),
+              tooltip: 'New product',
               onPressed: () => ProductCreateDialog.show(context),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+              child: FilledButton.icon(
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New product'),
+                onPressed: () => ProductCreateDialog.show(context),
+              ),
             ),
-          ),
           const SizedBox(width: AppTokens.s4),
         ],
       ),
@@ -203,21 +220,37 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               error: (e, _) => _StatsErrorRow(error: e.toString()),
             ),
           ),
-          // Search + filter row
+          // Search + filter row — stacks on narrow windows so the filter
+          // segments never collide with the search field.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppTokens.s5),
-            child: Row(
-              children: [
-                Expanded(child: _searchField(scheme)),
-                const SizedBox(width: AppTokens.s3),
-                _FilterChips(
-                  selected: filter,
-                  onChange: (f) => ref
-                      .read(inventoryControllerProvider.notifier)
-                      .setFilter(f),
-                ),
-              ],
-            ),
+            child: Builder(builder: (context) {
+              final filterChips = _FilterChips(
+                selected: filter,
+                onChange: (f) =>
+                    ref.read(inventoryControllerProvider.notifier).setFilter(f),
+              );
+              if (compactBar) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _searchField(scheme),
+                    const SizedBox(height: AppTokens.s2),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: filterChips,
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: _searchField(scheme)),
+                  const SizedBox(width: AppTokens.s3),
+                  filterChips,
+                ],
+              );
+            }),
           ),
           const SizedBox(height: AppTokens.s3),
           Expanded(
@@ -320,44 +353,33 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Row(
+    return ResponsiveCardGrid(
       children: [
-        Expanded(
-          child: _StatCard(
-            label: 'TOTAL PRODUCTS',
-            value: '${stats.total}',
-            icon: Icons.inventory_2_outlined,
-            color: scheme.primary,
-          ),
+        _StatCard(
+          label: 'TOTAL PRODUCTS',
+          value: '${stats.total}',
+          icon: Icons.inventory_2_outlined,
+          color: scheme.primary,
         ),
-        const SizedBox(width: AppTokens.s3),
-        Expanded(
-          child: _StatCard(
-            label: 'LOW STOCK',
-            value: '${stats.lowStock}',
-            icon: Icons.warning_amber_rounded,
-            color: AppTokens.brandWarning,
-            highlight: stats.lowStock > 0,
-          ),
+        _StatCard(
+          label: 'LOW STOCK',
+          value: '${stats.lowStock}',
+          icon: Icons.warning_amber_rounded,
+          color: AppTokens.brandWarning,
+          highlight: stats.lowStock > 0,
         ),
-        const SizedBox(width: AppTokens.s3),
-        Expanded(
-          child: _StatCard(
-            label: 'OUT OF STOCK',
-            value: '${stats.outOfStock}',
-            icon: Icons.do_not_disturb_on_outlined,
-            color: AppTokens.brandDanger,
-            highlight: stats.outOfStock > 0,
-          ),
+        _StatCard(
+          label: 'OUT OF STOCK',
+          value: '${stats.outOfStock}',
+          icon: Icons.do_not_disturb_on_outlined,
+          color: AppTokens.brandDanger,
+          highlight: stats.outOfStock > 0,
         ),
-        const SizedBox(width: AppTokens.s3),
-        Expanded(
-          child: _StatCard(
-            label: 'INVENTORY VALUE',
-            value: formatCurrency(stats.totalStockValue, settings),
-            icon: Icons.account_balance_wallet_outlined,
-            color: AppTokens.brandSuccess,
-          ),
+        _StatCard(
+          label: 'INVENTORY VALUE',
+          value: formatCurrency(stats.totalStockValue, settings),
+          icon: Icons.account_balance_wallet_outlined,
+          color: AppTokens.brandSuccess,
         ),
       ],
     );

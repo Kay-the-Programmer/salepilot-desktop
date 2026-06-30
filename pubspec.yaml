@@ -39,6 +39,7 @@ dependencies:
   intl: ^0.20.1
   window_manager: ^0.4.3
   logger: ^2.5.0
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:

@@ -92,6 +92,28 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// Register a new account. Registration requires email-OTP verification
+  /// before sign-in, so on success we surface an informational message rather
+  /// than a session.
+  Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    state = state.copyWith(loading: true, clearError: true);
+    try {
+      await _repo.register(name: name, email: email, password: password);
+      state = state.copyWith(
+        loading: false,
+        error: 'Account created. Check your email to verify, then sign in.',
+      );
+    } on ApiException catch (e) {
+      state = state.copyWith(loading: false, error: e.message);
+    } catch (e) {
+      state = state.copyWith(loading: false, error: e.toString());
+    }
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = const AuthState();

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/config.dart';
 import '../../core/theme.dart';
 import 'auth_controller.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -396,6 +397,29 @@ class _LoginForm extends ConsumerWidget {
                 textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),
+          ),
+          const SizedBox(height: AppTokens.s3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'New to SalePilot?',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+              ),
+              TextButton(
+                onPressed: loading
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Create account'),
+              ),
+            ],
           ),
           const SizedBox(height: AppTokens.s5),
           Container(

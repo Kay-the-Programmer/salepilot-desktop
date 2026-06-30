@@ -11,6 +11,8 @@ import '../../data/models/product.dart';
 import '../../data/models/sale.dart';
 import '../../data/models/store_settings.dart';
 import '../auth/auth_controller.dart';
+import '../dashboard/dashboard_screen.dart';
+import '../inventory/inventory_screen.dart';
 import 'cart_controller.dart';
 import 'pos_data_controller.dart';
 import 'widgets/barcode_listener.dart';
@@ -70,6 +72,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final filtered = _filter(data.products, _query);
 
     final scheme = Theme.of(context).colorScheme;
+    // Narrow the cart on smaller windows so the product catalog keeps a usable
+    // width (the grid itself reflows its column count automatically).
+    final cartWidth = MediaQuery.sizeOf(context).width < 960 ? 360.0 : 420.0;
 
     return BarcodeListener(
       paused: _modalOpen,
@@ -98,6 +103,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   case 'logout':
                     ref.read(cartProvider.notifier).clear();
                     ref.read(authStateProvider.notifier).logout();
+                  case 'dashboard':
+                    _withModal(() => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                        ));
+                  case 'inventory':
+                    _withModal(() => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const InventoryScreen()),
+                        ));
                   case 'returns':
                     _processReturn(settings);
                   case 'diagnostics':
@@ -163,7 +176,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ),
               // Right: cart + checkout column
               Container(
-                width: 420,
+                width: cartWidth,
                 decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: scheme.outlineVariant)),
                   color: scheme.surfaceContainerLowest,
@@ -450,6 +463,23 @@ class _TopBar extends StatelessWidget {
             onSelected: onMenuSelect,
             offset: const Offset(0, 48),
             itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'dashboard',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.dashboard_outlined),
+                  title: Text('Dashboard'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'inventory',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.inventory_2_outlined),
+                  title: Text('Inventory'),
+                ),
+              ),
+              PopupMenuDivider(),
               PopupMenuItem(
                 value: 'returns',
                 child: ListTile(

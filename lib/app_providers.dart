@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/db/app_database.dart';
+import 'data/repositories/categories_repository.dart';
 import 'data/repositories/customers_repository.dart';
 import 'data/repositories/products_repository.dart';
 import 'data/repositories/returns_repository.dart';
 import 'data/repositories/sales_repository.dart';
 import 'data/repositories/settings_repository.dart';
+import 'data/repositories/stock_take_repository.dart';
+import 'data/services/ai_service.dart';
 import 'data/sync/sync_engine.dart';
 import 'features/auth/auth_controller.dart';
 
@@ -28,6 +31,26 @@ final Provider<CustomersRepository> customersRepositoryProvider =
   return CustomersRepository(
     api: ref.watch(apiClientProvider),
     db: ref.watch(appDatabaseProvider),
+  );
+});
+
+final Provider<CategoriesRepository> categoriesRepositoryProvider =
+    Provider<CategoriesRepository>((ref) {
+  return CategoriesRepository(
+    api: ref.watch(apiClientProvider),
+    db: ref.watch(appDatabaseProvider),
+  );
+});
+
+final Provider<AiService> aiServiceProvider = Provider<AiService>((ref) {
+  return AiService(api: ref.watch(apiClientProvider));
+});
+
+final Provider<StockTakeRepository> stockTakeRepositoryProvider =
+    Provider<StockTakeRepository>((ref) {
+  return StockTakeRepository(
+    db: ref.watch(appDatabaseProvider),
+    products: ref.watch(productsRepositoryProvider),
   );
 });
 
