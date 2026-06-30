@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets — Google OAuth desktop client id/secret for --dart-define-from-file.
+# Keep google_oauth.example.json committed as the template; never commit the real one.
+google_oauth.json
